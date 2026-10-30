@@ -23,7 +23,7 @@ The default shortcut is **Alt+Shift+S**. Change it at `chrome://extensions/short
 - Runs on desktop watch pages, Shorts, and embeds (`youtube.com`, `m.youtube.com`, and `youtube-nocookie.com`), including after YouTube's in-app navigation.
 - Fetches segments with SponsorBlock's privacy lookup: the first 4 hex characters of SHA-256 of the video id. The video id is not in the request. Results are cached per video.
 - Per category: **Auto skip**, **Skip button**, **Seek bar only**, or **Off**. Sponsor, unpaid/self promotion, and interaction reminders start on auto skip. Intros, endcards, previews, and hooks start as a button. Filler, non-music sections, and whole-video "exclusive access" labels start off. Highlights are a mark on the bar and are never skipped.
-- Coloured ranges on the YouTube progress bar.
+- Coloured ranges on the YouTube progress bar, drawn at 85% opacity so they stay quieter than the red played bar. Sponsor defaults to a deep maroon. Each category colour can be changed in settings, or reset.
 - A small toast when a skip happens, with **Unskip**. Seeking backward into a segment that was just skipped does not skip it again.
 - A toolbar popup with an on/off switch, the current video's segments, and total time saved (`chrome.storage` on this browser only). It says when SponsorBlock returned no segments, when the request failed, and when the content script is not running in the tab.
 - An optional debug log in settings, kept in this browser, for the player, the SponsorBlock response, skips, and seeks back into a segment.

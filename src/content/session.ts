@@ -1,4 +1,4 @@
-import { categoryById, skipButtonText, toastText } from "../lib/categories"
+import { colorFor, skipButtonText, toastText } from "../lib/categories"
 import { recordDebug } from "../lib/debug-log"
 import { playbackDuration } from "../lib/live"
 import { evaluate, holdSegments, manualSkipTarget, type Flags } from "../lib/segment-logic"
@@ -405,7 +405,7 @@ export class WatchSession {
         undo.saved = saved
         undo.accounted = true
         void this.reportStats(saved, 1)
-        this.showToast(undo.categories, categoryById(undo.categories[0] ?? "")?.color ?? "#3ddc84")
+        this.showToast(undo.categories, colorFor(this.settings.colors, undo.categories[0] ?? ""))
       }
     }
     this.previousTime = landed
@@ -567,7 +567,10 @@ export class WatchSession {
       return segment.start < duration
     })
     const signature = `${duration.toFixed(3)}|${visible
-      .map((segment) => `${segment.uuid}:${segment.start}:${segment.end}:${this.settings.modes[segment.category]}`)
+      .map(
+        (segment) =>
+          `${segment.uuid}:${segment.start}:${segment.end}:${this.settings.modes[segment.category]}:${colorFor(this.settings.colors, segment.category)}`,
+      )
       .join(",")}`
     if (signature === this.markerSignature && this.markerRoot?.isConnected) return
     this.markerSignature = signature
@@ -579,7 +582,7 @@ export class WatchSession {
       const mark = document.createElement("div")
       const point = segment.end - segment.start < 0.25
       mark.className = point ? "skipsmith-marker skipsmith-marker-point" : "skipsmith-marker"
-      mark.style.background = categoryById(segment.category)?.color ?? "#00d400"
+      mark.style.background = colorFor(this.settings.colors, segment.category)
       const left = (segment.start / duration) * 100
       mark.style.left = `${Math.min(100, Math.max(0, left))}%`
       if (!point) {

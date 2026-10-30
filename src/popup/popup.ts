@@ -1,4 +1,4 @@
-import { categoryById, MODE_LABELS } from "../lib/categories"
+import { categoryById, colorFor, MODE_LABELS } from "../lib/categories"
 import { popupCopy, type PopupTone } from "../lib/popup-notice"
 import { emptyVideoState, type Segment, type VideoState } from "../lib/segment"
 import { resolveSettings, resolveStats, SETTINGS_KEY, STATS_KEY, type Settings } from "../lib/settings"
@@ -67,7 +67,7 @@ function segmentRow(segment: Segment): HTMLLIElement {
   const item = document.createElement("li")
   const swatch = document.createElement("span")
   swatch.className = "swatch"
-  swatch.style.background = info?.color ?? "#00d400"
+  swatch.style.background = colorFor(settings.colors, segment.category)
   const label = document.createElement("span")
   label.className = "seg-label"
   const action = segment.actionType === "mute" ? " · mute" : segment.actionType === "full" ? " · full video" : ""
