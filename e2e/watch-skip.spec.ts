@@ -180,8 +180,33 @@ test("skips the real sponsor on NBCM_ZoWZo8 and lets a seek back play it", async
       if (!target?.closest("#movie_player")) return `outside:${name}`
       return "open"
     })
-    await page.screenshot({ path: path.join(shots, "markers-before-sponsor.png") })
     expect(hit).toBe("open")
+    const paint = await marker.evaluate((element) => {
+      const style = getComputedStyle(element)
+      const bar = element.closest(".ytp-progress-bar")
+      return {
+        background: style.backgroundColor,
+        opacity: style.opacity,
+        mark: element.getBoundingClientRect().height,
+        bar: bar instanceof HTMLElement ? bar.getBoundingClientRect().height : 0,
+      }
+    })
+    expect(paint.background).toBe("rgb(122, 15, 18)")
+    expect(paint.opacity).toBe("0.85")
+    expect(Math.abs(paint.mark - paint.bar)).toBeLessThan(2)
+    await page.locator(".ytp-progress-bar-container").hover()
+    await page.waitForTimeout(400)
+    const hovered = await marker.evaluate((element) => {
+      const bar = element.closest(".ytp-progress-bar")
+      return {
+        mark: element.getBoundingClientRect().height,
+        bar: bar instanceof HTMLElement ? bar.getBoundingClientRect().height : 0,
+      }
+    })
+    expect(Math.abs(hovered.mark - hovered.bar)).toBeLessThan(2)
+    expect(hovered.mark).toBeGreaterThan(0)
+    await page.locator(".ytp-chrome-bottom").screenshot({ path: path.join(shots, "marker-on-bar.png") })
+    await page.screenshot({ path: path.join(shots, "markers-before-sponsor.png") })
 
     await page.evaluate(() => {
       const video = document.querySelector("#movie_player video")

@@ -1,8 +1,9 @@
-import { type CategoryMode, defaultModes, isCategoryMode } from "./categories"
+import { type CategoryMode, defaultColors, defaultModes, isCategoryMode, isHexColor } from "./categories"
 
 export interface Settings {
   enabled: boolean
   modes: Record<string, CategoryMode>
+  colors: Record<string, string>
   excludedChannels: string[]
   rememberSpeed: boolean
   debug: boolean
@@ -24,6 +25,7 @@ export function defaultSettings(): Settings {
   return {
     enabled: true,
     modes: defaultModes(),
+    colors: defaultColors(),
     excludedChannels: [],
     rememberSpeed: false,
     debug: false,
@@ -47,6 +49,16 @@ export function resolveSettings(stored: unknown): Settings {
     }
   }
 
+  const colors = { ...defaults.colors }
+  if (isRecord(stored.colors)) {
+    for (const category of Object.keys(defaults.colors)) {
+      const value = stored.colors[category]
+      if (typeof value !== "string") continue
+      const hex = value.trim().toLowerCase()
+      if (isHexColor(hex)) colors[category] = hex
+    }
+  }
+
   const excluded = Array.isArray(stored.excludedChannels)
     ? stored.excludedChannels.filter((id): id is string => typeof id === "string" && id.length > 0 && id.length < 200)
     : []
@@ -54,6 +66,7 @@ export function resolveSettings(stored: unknown): Settings {
   return {
     enabled: typeof stored.enabled === "boolean" ? stored.enabled : defaults.enabled,
     modes,
+    colors,
     excludedChannels: [...new Set(excluded)],
     rememberSpeed: typeof stored.rememberSpeed === "boolean" ? stored.rememberSpeed : false,
     debug: stored.debug === true,

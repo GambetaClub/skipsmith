@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { readCached, writeCached, CACHE_LIMIT } from "../src/lib/cache"
+import { CATEGORIES, MARKER_OPACITY } from "../src/lib/categories"
 import { adjustStats, resolveSettings, resolveStats } from "../src/lib/settings"
 import { rateFor, rememberRate, resolveSpeeds } from "../src/lib/speeds"
 import { formatClock, formatRange, formatSaved } from "../src/lib/time"
@@ -18,6 +19,20 @@ describe("settings", () => {
     expect(settings.modes.intro).toBe("button")
     expect(settings.modes.filler).toBe("off")
     expect(settings.modes.poi_highlight).toBe("seekbar")
+    expect(MARKER_OPACITY).toBe(0.85)
+    expect(settings.colors.sponsor).toBe("#7a0f12")
+    expect(new Set(Object.values(settings.colors)).size).toBe(CATEGORIES.length)
+  })
+
+  it("keeps a custom timeline colour and ignores a bad one", () => {
+    const settings = resolveSettings({
+      colors: { sponsor: " #AABBCC ", intro: "red", filler: "#11223344", selfpromo: "#8a6b2a" },
+    })
+    expect(settings.colors.sponsor).toBe("#aabbcc")
+    expect(settings.colors.intro).toBe("#3e6f73")
+    expect(settings.colors.filler).toBe("#5c4a78")
+    expect(settings.colors.selfpromo).toBe("#8a6b2a")
+    expect(settings.colors).not.toHaveProperty("unknown")
   })
 
   it("keeps stored modes and refuses to auto-skip a highlight", () => {

@@ -1,4 +1,4 @@
-import { CATEGORIES, MODE_LABELS, modesFor } from "../lib/categories"
+import { CATEGORIES, colorFor, MODE_LABELS, modesFor } from "../lib/categories"
 import { DEBUG_LOG_KEY, formatDebug, type DebugEntry } from "../lib/debug-log"
 import { resolveSettings, SETTINGS_KEY } from "../lib/settings"
 
@@ -12,6 +12,7 @@ const debugClear = document.querySelector<HTMLButtonElement>("#debug-clear")
 
 let settings = resolveSettings(undefined)
 let saveTimer = 0
+let persistTimer = 0
 
 function requireElement<T extends Element>(element: T | null, name: string): T {
   if (!element) throw new Error(`Missing ${name}`)
@@ -32,6 +33,13 @@ async function persist(): Promise<void> {
   flashSaved()
 }
 
+function queuePersist(): void {
+  window.clearTimeout(persistTimer)
+  persistTimer = window.setTimeout(() => {
+    void persist()
+  }, 200)
+}
+
 function render(): void {
   const list = requireElement(root, "categories")
   list.replaceChildren()
@@ -41,7 +49,7 @@ function render(): void {
     const header = document.createElement("header")
     const swatch = document.createElement("span")
     swatch.className = "swatch"
-    swatch.style.background = category.color
+    swatch.style.background = colorFor(settings.colors, category.id)
     const text = document.createElement("div")
     const heading = document.createElement("h2")
     heading.textContent = category.label
@@ -49,7 +57,39 @@ function render(): void {
     hint.className = "hint"
     hint.textContent = category.description
     text.append(heading, hint)
-    header.append(swatch, text)
+
+    const colorControl = document.createElement("div")
+    colorControl.className = "color-control"
+    const picker = document.createElement("input")
+    picker.type = "color"
+    picker.id = `color-${category.id}`
+    picker.value = colorFor(settings.colors, category.id)
+    picker.setAttribute("aria-label", `${category.label} timeline colour`)
+    const reset = document.createElement("button")
+    reset.type = "button"
+    reset.className = "quiet"
+    reset.textContent = "Reset to default"
+    reset.setAttribute("aria-label", `Reset ${category.label} colour`)
+    const syncReset = (): void => {
+      reset.disabled = picker.value.toLowerCase() === category.color.toLowerCase()
+    }
+    syncReset()
+    picker.addEventListener("input", () => {
+      const next = picker.value.toLowerCase()
+      settings = { ...settings, colors: { ...settings.colors, [category.id]: next } }
+      swatch.style.background = next
+      syncReset()
+      queuePersist()
+    })
+    reset.addEventListener("click", () => {
+      settings = { ...settings, colors: { ...settings.colors, [category.id]: category.color } }
+      picker.value = category.color
+      swatch.style.background = category.color
+      syncReset()
+      void persist()
+    })
+    colorControl.append(picker, reset)
+    header.append(swatch, text, colorControl)
 
     const modes = document.createElement("div")
     modes.className = "modes"
