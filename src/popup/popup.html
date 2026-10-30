@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Skipsmith</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header class="top">
+      <img src="../icons/icon32.png" width="32" height="32" alt="" />
+      <div class="titles">
+        <h1>Skipsmith</h1>
+        <p>Sponsor segments, on your terms</p>
+      </div>
+      <button id="power" class="power" type="button" aria-pressed="true">
+        <span class="power-label">On</span>
+      </button>
+    </header>
+
+    <section class="saved" aria-label="Time saved">
+      <p class="saved-value" id="saved">0s</p>
+      <p class="saved-caption" id="saved-caption">saved on this browser</p>
+    </section>
+
+    <section class="video" aria-live="polite">
+      <h2 id="video-title">This video</h2>
+      <p id="channel" class="channel" hidden></p>
+      <p id="status" class="status"></p>
+      <ul id="segments" class="segments"></ul>
+      <button id="exclude" class="text-button" type="button" hidden></button>
+    </section>
+
+    <footer>
+      <button id="options" class="text-button" type="button">Category behaviour</button>
+      <p class="credit">
+        Segment data is from
+        <a href="https://sponsor.ajay.app" target="_blank" rel="noreferrer">SponsorBlock</a>
+        (CC BY-NC-SA 4.0). Skipsmith sends a short hash prefix, not the video id, and it has no analytics.
+      </p>
+    </footer>
+    <script src="popup.js"></script>
+  </body>
+</html>

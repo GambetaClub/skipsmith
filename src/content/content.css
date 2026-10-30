@@ -1,0 +1,133 @@
+.html5-video-player .skipsmith-markers {
+  position: absolute;
+  inset: 0;
+  z-index: 35;
+  display: block;
+  height: 100%;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.skipsmith-marker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 1px;
+  opacity: 0.92;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.4);
+}
+
+.skipsmith-marker-point {
+  width: 4px;
+  margin-left: -2px;
+}
+
+.html5-video-player > .skipsmith-btn,
+.html5-video-player > .skipsmith-toast,
+.skipsmith-btn,
+.skipsmith-toast {
+  all: initial;
+  position: absolute !important;
+  z-index: 80 !important;
+  box-sizing: border-box;
+  font-family: "Segoe UI", system-ui, sans-serif !important;
+  font-size: 13px !important;
+  line-height: 1.2 !important;
+  letter-spacing: 0.01em;
+  color: #f7f3ea !important;
+  background: rgba(20, 16, 12, 0.94) !important;
+  border: 1px solid rgba(255, 244, 220, 0.16) !important;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+  width: auto !important;
+  height: auto !important;
+  min-width: 0 !important;
+  max-width: none;
+  margin: 0 !important;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.html5-video-player > .skipsmith-btn,
+.skipsmith-btn {
+  right: 14px !important;
+  bottom: 72px !important;
+  left: auto !important;
+  top: auto !important;
+  display: inline-flex !important;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px !important;
+  border-radius: 999px !important;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.skipsmith-btn::before {
+  content: "";
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 8px solid #3ddc84;
+}
+
+.skipsmith-btn:hover,
+.skipsmith-btn:focus-visible {
+  background: rgba(36, 30, 24, 0.98) !important;
+  outline: 2px solid #3ddc84;
+  outline-offset: 2px;
+}
+
+.html5-video-player > .skipsmith-toast,
+.skipsmith-toast {
+  left: 14px !important;
+  bottom: 72px !important;
+  right: auto !important;
+  top: auto !important;
+  display: flex !important;
+  align-items: center;
+  gap: 12px;
+  max-width: min(420px, calc(100% - 28px));
+  padding: 8px 8px 8px 12px !important;
+  border-radius: 12px !important;
+  border-left: 4px solid #3ddc84 !important;
+}
+
+.skipsmith-toast[hidden],
+.skipsmith-btn[hidden] {
+  display: none !important;
+}
+
+.skipsmith-toast-text {
+  font: inherit !important;
+  color: inherit !important;
+}
+
+.skipsmith-unskip {
+  all: initial;
+  font-family: "Segoe UI", system-ui, sans-serif !important;
+  font-size: 13px !important;
+  font-weight: 650 !important;
+  color: #f7f3ea !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 8px;
+  padding: 6px 8px !important;
+  cursor: pointer;
+  width: auto !important;
+  height: auto !important;
+}
+
+.skipsmith-unskip:hover,
+.skipsmith-unskip:focus-visible {
+  color: #9cf0c0 !important;
+  outline: 2px solid #3ddc84;
+  outline-offset: 1px;
+}
+
+.html5-video-player.ytp-autohide > .skipsmith-btn,
+.html5-video-player.ytp-autohide > .skipsmith-toast,
+.html5-video-player.ytp-autohide .skipsmith-btn,
+.html5-video-player.ytp-autohide .skipsmith-toast {
+  bottom: 18px !important;
+}

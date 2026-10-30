@@ -1,0 +1,28 @@
+{
+  "name": "skipsmith",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Skip sponsored segments on YouTube using SponsorBlock. Manifest V3 extension for Chrome and Brave.",
+  "scripts": {
+    "build": "tsc --noEmit && node build.mjs",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "check": "npm run lint && npm run test && npm run build && npm run test:e2e"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.0",
+    "@playwright/test": "^1.56.1",
+    "@types/chrome": "^0.1.24",
+    "@types/node": "^22.19.0",
+    "esbuild": "^0.25.11",
+    "eslint": "^9.39.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.2",
+    "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
