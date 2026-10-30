@@ -129,6 +129,20 @@ h2 {
   font-size: 12px;
 }
 
+.status-error {
+  color: #8a2b12;
+  font-weight: 650;
+}
+
+.status-warn {
+  color: #8a4b12;
+  font-weight: 650;
+}
+
+.status-empty {
+  color: var(--muted);
+}
+
 .segments {
   list-style: none;
   margin: 10px 0 0;

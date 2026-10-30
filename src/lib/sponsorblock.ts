@@ -33,12 +33,14 @@ function parseOne(value: unknown): Segment | null {
     typeof value.UUID === "string" && value.UUID
       ? value.UUID
       : `${category}:${start.toFixed(3)}:${end.toFixed(3)}`
+  const hinted = Number(value.videoDuration)
   return {
     uuid,
     category,
     actionType,
     start: Math.max(0, start),
     end: Math.max(0, end),
+    ...(Number.isFinite(hinted) && hinted > 0 ? { videoDuration: hinted } : {}),
   }
 }
 

@@ -1,4 +1,6 @@
 import { categoryById, skipButtonText, toastText } from "../lib/categories"
+import { recordDebug } from "../lib/debug-log"
+import { playbackDuration } from "../lib/live"
 import { evaluate, holdSegments, manualSkipTarget, type Flags } from "../lib/segment-logic"
 import type { Segment, VideoState } from "../lib/segment"
 import { resolveSettings, SETTINGS_KEY, type Settings } from "../lib/settings"
@@ -34,6 +36,8 @@ export class WatchSession {
   private userSeek = false
   private programmatic = 0
   private activeSeek = 0
+  private applyingSeek = false
+  private seekCleanup: (() => void) | null = null
   private disposed = false
   private loading = true
   private error: string | null = null
@@ -47,6 +51,7 @@ export class WatchSession {
   private mutedByUs = false
   private mutedBefore: boolean | null = null
   private wasAd = false
+  private loggedLive = false
   private markerRoot: HTMLDivElement | null = null
   private markerSignature = ""
   private button: HTMLButtonElement | null = null
@@ -57,11 +62,20 @@ export class WatchSession {
     this.sample(false)
   }
   private readonly onSeeking = (): void => {
-    if (this.programmatic > 0) return
+    if (this.applyingSeek) return
+    if (this.programmatic > 0) {
+      if (this.viewerReturnedInsideSkip()) this.abandonSkipForViewer()
+      return
+    }
     this.userSeek = true
   }
   private readonly onSeeked = (): void => {
     if (this.programmatic > 0) return
+    const time = this.video.currentTime
+    const inside = this.segments.some((segment) => time >= segment.start && time < segment.end)
+    if (inside && this.previousTime - time >= 1) {
+      void recordDebug("player", `Seek back to ${time.toFixed(1)}s inside a segment; it will play`)
+    }
     this.userSeek = true
     this.sample(false)
     this.userSeek = false
@@ -75,6 +89,7 @@ export class WatchSession {
   private readonly onDuration = (): void => {
     this.markerSignature = ""
     this.renderMarkers()
+    this.sample(false)
   }
   private readonly onMetadata = (): void => {
     if (this.disposed) return
@@ -180,6 +195,7 @@ export class WatchSession {
   snapshot(): VideoState {
     return {
       onVideo: true,
+      attached: true,
       videoId: this.videoId,
       title: this.title,
       channelId: this.channelId,
@@ -194,7 +210,7 @@ export class WatchSession {
 
   manualSkip(): void {
     if (this.disposed || !this.settings.enabled || this.excluded || this.blocked()) return
-    const target = manualSkipTarget(this.video.currentTime, this.segments, this.settings.modes, this.video.duration)
+    const target = manualSkipTarget(this.video.currentTime, this.segments, this.settings.modes, this.duration())
     if (!target) return
     this.flags = holdSegments(this.flags, target.uuids)
     this.beginSkip(this.video.currentTime, target.end, target.uuids, target.categories)
@@ -206,6 +222,7 @@ export class WatchSession {
     this.settings = resolveSettings(stored[SETTINGS_KEY])
     this.refreshChrome()
     this.excluded = this.channelExcluded()
+    void recordDebug("player", `Attached to ${this.videoId}`)
     if (!this.excluded) await this.loadSegments()
     else this.loading = false
     if (this.disposed) return
@@ -222,6 +239,7 @@ export class WatchSession {
     if (!chrome.runtime?.id) {
       this.loading = false
       this.error = "Reload this tab to reconnect Skipsmith."
+      void recordDebug("player", `Extension disconnected on ${this.videoId}`)
       return
     }
     try {
@@ -229,19 +247,32 @@ export class WatchSession {
       if (this.disposed) return
       if (!isFetchOk(response)) {
         this.segments = []
-        this.error = response && typeof response === "object" && "error" in response && typeof response.error === "string"
-          ? response.error
-          : "SponsorBlock didn't respond."
+        const message =
+          response && typeof response === "object" && "error" in response && typeof response.error === "string"
+            ? response.error
+            : "SponsorBlock didn't respond."
+        this.error = message
+        void recordDebug("player", `SponsorBlock error for ${this.videoId}: ${message}`)
       } else if (response.videoId && response.videoId !== this.videoId) {
         return
       } else {
         this.segments = response.segments
         this.error = null
+        const summary = this.segments
+          .map((segment) => `${segment.category} ${segment.start.toFixed(1)}–${segment.end.toFixed(1)}`)
+          .join(", ")
+        void recordDebug(
+          "player",
+          this.segments.length === 0
+            ? `No segments for ${this.videoId}`
+            : `${this.segments.length} segments for ${this.videoId}: ${summary}`,
+        )
       }
     } catch {
       if (this.disposed) return
       this.segments = []
       this.error = "SponsorBlock didn't respond."
+      void recordDebug("player", `SponsorBlock didn't respond for ${this.videoId}`)
     } finally {
       if (!this.disposed) {
         this.loading = false
@@ -262,7 +293,19 @@ export class WatchSession {
       this.renderMarkers()
       return true
     }
-    return isLivePlayback(this.video)
+    if (!isLivePlayback(this.video)) return false
+    if (!this.loggedLive) {
+      this.loggedLive = true
+      void recordDebug("player", `Live player on ${this.videoId}; not skipping`)
+    }
+    return true
+  }
+
+  private duration(): number {
+    return playbackDuration(
+      this.video.duration,
+      this.segments.map((segment) => segment.videoDuration ?? 0),
+    )
   }
 
   private sample(initialOverride: boolean): void {
@@ -279,7 +322,7 @@ export class WatchSession {
       previousTime: this.previousTime,
       currentTime: this.video.currentTime,
       playbackRate: this.video.playbackRate || 1,
-      duration: Number.isFinite(this.video.duration) ? this.video.duration : 0,
+      duration: this.duration(),
       playing: !this.video.paused,
       initial: initialOverride || this.initial,
       userSeek: this.userSeek,
@@ -300,9 +343,10 @@ export class WatchSession {
   }
 
   private beginSkip(from: number, to: number, uuids: string[], categories: string[]): void {
-    const destination = clampToDuration(to, this.video.duration)
+    const destination = clampToDuration(to, this.duration())
     if (destination <= from + 0.12) return
     this.undo = { from, to: destination, uuids, categories, saved: 0, accounted: false, retries: 0 }
+    void recordDebug("player", `Skip ${categories.join(", ") || "segment"} from ${from.toFixed(1)}s to ${destination.toFixed(1)}s`)
     this.seekTo(destination)
   }
 
@@ -322,8 +366,14 @@ export class WatchSession {
       this.finishSeek(token)
     }
     this.programmatic += 1
+    this.seekCleanup?.()
     this.video.addEventListener("seeked", finish)
+    this.seekCleanup = () => {
+      this.video.removeEventListener("seeked", finish)
+    }
+    this.applyingSeek = true
     this.video.currentTime = time
+    this.applyingSeek = false
     window.setTimeout(() => {
       if (token !== this.activeSeek) return
       if (!this.video.seeking) {
@@ -339,9 +389,15 @@ export class WatchSession {
     const undo = this.undo
     const landed = this.video.currentTime
     if (undo && landed < undo.to - 0.4 && undo.retries < 1 && this.stillInside(undo.uuids)) {
-      undo.retries += 1
-      this.seekTo(undo.to)
-      return
+      // Still at the start means the skip did not land. A playhead parked deeper in
+      // the segment is the viewer going back; latch it instead of seeking again.
+      const stayedAtStart = landed < undo.from + Math.max(2, (this.video.playbackRate || 1) * 0.75)
+      if (stayedAtStart) {
+        undo.retries += 1
+        this.seekTo(undo.to)
+        return
+      }
+      this.flags = holdSegments(this.flags, undo.uuids)
     }
     if (undo && !undo.accounted) {
       const saved = Math.max(0, Math.min(landed, undo.to) - undo.from)
@@ -364,12 +420,34 @@ export class WatchSession {
     return this.segments.some((segment) => uuids.includes(segment.uuid) && time >= segment.start && time < segment.end)
   }
 
+  /** A seek that is not ours, landing inside the segment and clear of its start. */
+  private viewerReturnedInsideSkip(): boolean {
+    const undo = this.undo
+    if (!undo) return false
+    const time = this.video.currentTime
+    if (!(time < undo.to - 0.75)) return false
+    if (time < undo.from + 0.35) return false
+    return time < undo.to
+  }
+
+  private abandonSkipForViewer(): void {
+    this.activeSeek += 1
+    this.seekCleanup?.()
+    this.seekCleanup = null
+    if (this.programmatic > 0) this.programmatic -= 1
+    const undo = this.undo
+    if (!undo) return
+    this.flags = holdSegments(this.flags, undo.uuids)
+    void recordDebug("player", `Viewer seek to ${this.video.currentTime.toFixed(1)}s kept the segment playing`)
+  }
+
   private unskip(): void {
     const undo = this.undo
     if (!undo || this.disposed) return
     this.hideToast()
     this.flags = holdSegments(this.flags, undo.uuids)
     if (undo.accounted) void this.reportStats(-undo.saved, -1)
+    void recordDebug("player", `Unskip to ${undo.from.toFixed(1)}s`)
     this.undo = null
     this.previousTime = undo.from
     this.seekTo(undo.from)
@@ -384,7 +462,7 @@ export class WatchSession {
       previousTime: this.video.currentTime,
       currentTime: this.video.currentTime,
       playbackRate: this.video.playbackRate || 1,
-      duration: Number.isFinite(this.video.duration) ? this.video.duration : 0,
+      duration: this.duration(),
       playing: false,
       initial: false,
       userSeek: false,
@@ -470,14 +548,13 @@ export class WatchSession {
 
   private renderMarkers(): void {
     const bar = findProgressBar(this.video)
-    const duration = this.video.duration
+    const duration = this.duration()
     const show =
       this.settings.enabled &&
       !this.excluded &&
       !isAdPlaying(this.video) &&
       !isLivePlayback(this.video) &&
       bar &&
-      Number.isFinite(duration) &&
       duration > 0
     if (!show || !bar) {
       this.markerRoot?.remove()
@@ -485,7 +562,10 @@ export class WatchSession {
       this.markerSignature = ""
       return
     }
-    const visible = this.segments.filter((segment) => (this.settings.modes[segment.category] ?? "off") !== "off")
+    const visible = this.segments.filter((segment) => {
+      if ((this.settings.modes[segment.category] ?? "off") === "off") return false
+      return segment.start < duration
+    })
     const signature = `${duration.toFixed(3)}|${visible
       .map((segment) => `${segment.uuid}:${segment.start}:${segment.end}:${this.settings.modes[segment.category]}`)
       .join(",")}`
@@ -508,7 +588,9 @@ export class WatchSession {
       }
       root.append(mark)
     }
-    bar.append(root)
+    const scrubber = bar.querySelector(".ytp-scrubber-container")
+    if (scrubber) bar.insertBefore(root, scrubber)
+    else bar.append(root)
     this.markerRoot = root
   }
 

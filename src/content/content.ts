@@ -1,14 +1,18 @@
-import { WatchSession } from "./session"
+import { recordDebug } from "../lib/debug-log"
 import { emptyVideoState, type VideoState } from "../lib/segment"
 import { videoIdFromUrl } from "../lib/youtube-url"
 import { videoForPage } from "./page"
+import { WatchSession } from "./session"
 
 let videoId: string | null = null
 let video: HTMLVideoElement | null = null
 let session: WatchSession | null = null
+let reportedMissing: string | null = null
 
 function currentState(): VideoState {
-  return session?.snapshot() ?? emptyVideoState()
+  if (session) return session.snapshot()
+  if (!videoId) return emptyVideoState()
+  return { ...emptyVideoState(), onVideo: true, videoId, attached: false }
 }
 
 function tick(): void {
@@ -23,9 +27,16 @@ function tick(): void {
   videoId = nextId
   video = nextVideo
   if (nextId && nextVideo) {
+    reportedMissing = null
     session = new WatchSession(nextId, nextVideo)
     session.start()
+    return
   }
+  if (nextId && !nextVideo && reportedMissing !== nextId) {
+    reportedMissing = nextId
+    void recordDebug("player", `No player element for ${nextId}`)
+  }
+  if (!nextId) reportedMissing = null
 }
 
 function boot(): void {

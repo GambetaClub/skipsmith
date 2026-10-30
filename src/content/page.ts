@@ -1,3 +1,5 @@
+import { liveFromSignals } from "../lib/live"
+
 export interface ChannelInfo {
   id: string | null
   name: string | null
@@ -13,17 +15,24 @@ export function videoForPage(videoId: string): HTMLVideoElement | null {
   return video
 }
 
+function isVideo(node: Element | null): node is HTMLVideoElement {
+  return node instanceof HTMLVideoElement
+}
+
 export function findMainVideo(): HTMLVideoElement | null {
   const activeShort = document.querySelector("ytd-reel-video-renderer[is-active] video")
-  if (activeShort instanceof HTMLVideoElement) return activeShort
+  if (isVideo(activeShort)) return activeShort
 
-  const movie = document.querySelector("#movie_player video")
-  if (movie instanceof HTMLVideoElement) return movie
-
-  const embed = document.querySelector(".html5-video-player video.html5-main-video")
-  if (embed instanceof HTMLVideoElement) return embed
-
-  return null
+  const candidates = [
+    ...document.querySelectorAll("#movie_player video, .html5-video-player video.html5-main-video"),
+  ].filter(isVideo)
+  const playing = candidates.find(
+    (video) => !video.paused && video.readyState >= 2 && video.getBoundingClientRect().width > 160,
+  )
+  if (playing) return playing
+  const sized = candidates.find((video) => video.getBoundingClientRect().width > 160)
+  if (sized) return sized
+  return candidates[0] ?? null
 }
 
 export function findPlayer(video: HTMLVideoElement): HTMLElement | null {
@@ -115,11 +124,15 @@ export function isAdPlaying(video: HTMLVideoElement): boolean {
 }
 
 export function isLivePlayback(video: HTMLVideoElement): boolean {
-  if (!Number.isFinite(video.duration)) return true
   const player = video.closest(".html5-video-player")
   if (!(player instanceof HTMLElement)) return false
-  if (player.classList.contains("ytp-live")) return true
   const badge = player.querySelector(".ytp-live-badge")
-  if (!(badge instanceof HTMLElement)) return false
-  return getComputedStyle(badge).display !== "none" && !badge.hasAttribute("disabled")
+  const badgeDisabled =
+    badge instanceof HTMLElement &&
+    (badge.hasAttribute("disabled") || badge.getAttribute("aria-disabled") === "true")
+  return liveFromSignals({
+    playerLiveClass: player.classList.contains("ytp-live"),
+    badgeDisplay: badge instanceof HTMLElement ? getComputedStyle(badge).display : null,
+    badgeDisabled,
+  })
 }

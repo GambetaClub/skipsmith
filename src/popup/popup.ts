@@ -1,4 +1,5 @@
 import { categoryById, MODE_LABELS } from "../lib/categories"
+import { popupCopy, type PopupTone } from "../lib/popup-notice"
 import { emptyVideoState, type Segment, type VideoState } from "../lib/segment"
 import { resolveSettings, resolveStats, SETTINGS_KEY, STATS_KEY, type Settings } from "../lib/settings"
 import { formatRange, formatSaved } from "../lib/time"
@@ -15,6 +16,8 @@ const options = document.querySelector<HTMLButtonElement>("#options")
 
 let settings = resolveSettings(undefined)
 let state = emptyVideoState()
+let tabUrl: string | null = null
+let reachable = false
 
 function requireElement<T extends Element>(element: T | null, name: string): T {
   if (!element) throw new Error(`Missing ${name}`)
@@ -30,14 +33,25 @@ function isVideoState(value: unknown): value is VideoState {
   return typeof value === "object" && value !== null && "onVideo" in value && "segments" in value
 }
 
-async function readVideo(): Promise<VideoState> {
+function withAttached(state: VideoState): VideoState {
+  return { ...state, attached: state.attached !== false }
+}
+
+async function readVideo(): Promise<void> {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
-  if (tab?.id == null) return emptyVideoState()
+  tabUrl = typeof tab?.url === "string" ? tab.url : null
+  if (tab?.id == null) {
+    reachable = false
+    state = emptyVideoState()
+    return
+  }
   try {
     const response: unknown = await chrome.tabs.sendMessage(tab.id, { type: "get-video-state" })
-    return isVideoState(response) ? response : emptyVideoState()
+    reachable = true
+    state = isVideoState(response) ? withAttached(response) : emptyVideoState()
   } catch {
-    return emptyVideoState()
+    reachable = false
+    state = emptyVideoState()
   }
 }
 
@@ -77,44 +91,32 @@ function render(): void {
   const excludeButton = requireElement(exclude, "exclude")
   rows.replaceChildren()
 
-  if (!state.onVideo) {
-    heading.textContent = "No video open"
-    channelLine.hidden = true
-    note.textContent = "Open a YouTube video. Segments for it will show up here."
-    excludeButton.hidden = true
-    return
-  }
+  const copy = popupCopy({ tabUrl, reachable, state, enabled: settings.enabled })
+  heading.textContent = copy.title
+  note.textContent = copy.status
+  note.classList.remove("status-error", "status-warn", "status-empty")
+  if (copy.tone !== "idle") note.classList.add(toneClass(copy.tone))
 
-  heading.textContent = state.title || "This video"
-  if (state.channelName) {
-    channelLine.hidden = false
-    channelLine.textContent = state.channelName
-  } else {
-    channelLine.hidden = true
-  }
+  const showChannel = state.onVideo && state.attached && Boolean(state.channelName)
+  channelLine.hidden = !showChannel
+  if (showChannel && state.channelName) channelLine.textContent = state.channelName
 
-  if (state.channelId) {
+  if (state.onVideo && state.attached && state.channelId) {
     excludeButton.hidden = false
     excludeButton.textContent = state.excluded ? "Include this channel" : "Don't skip this channel"
   } else {
     excludeButton.hidden = true
   }
 
-  if (!settings.enabled) {
-    note.textContent = "Skipping is off. The list below is still filled in."
-  } else if (state.excluded) {
-    note.textContent = "This channel is excluded. Nothing here will be skipped."
-  } else if (state.loading) {
-    note.textContent = "Asking SponsorBlock…"
-  } else if (state.error) {
-    note.textContent = state.error
-  } else if (state.segments.length === 0) {
-    note.textContent = "No segments submitted for this video."
-  } else {
-    note.textContent = ""
+  if (copy.showSegments) {
+    for (const segment of state.segments) rows.append(segmentRow(segment))
   }
+}
 
-  for (const segment of state.segments) rows.append(segmentRow(segment))
+function toneClass(tone: PopupTone): string {
+  if (tone === "error") return "status-error"
+  if (tone === "warn") return "status-warn"
+  return "status-empty"
 }
 
 async function refresh(): Promise<void> {
@@ -122,7 +124,7 @@ async function refresh(): Promise<void> {
   settings = resolveSettings(stored[SETTINGS_KEY])
   const stats = resolveStats(stored[STATS_KEY])
   renderStats(stats.timeSavedSeconds, stats.skipCount)
-  state = await readVideo()
+  await readVideo()
   render()
 }
 

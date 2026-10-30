@@ -28,6 +28,8 @@ test("unpacked extension opens its popup and options", async () => {
     const options = await context.newPage()
     await options.goto(`chrome-extension://${extensionId}/options/options.html`)
     await expect(options.getByRole("heading", { name: "What should be skipped" })).toBeVisible()
+    await expect(options.getByRole("heading", { name: "Debug log" })).toBeVisible()
+    await expect(options.getByLabel("Record a debug log")).not.toBeChecked()
     await expect(options.getByRole("heading", { name: "Sponsor", exact: true })).toBeVisible()
     const sponsorAuto = options.locator('input[name="sponsor"][value="auto"]')
     await expect(sponsorAuto).toBeChecked()

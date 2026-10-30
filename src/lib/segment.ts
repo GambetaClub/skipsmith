@@ -4,10 +4,14 @@ export interface Segment {
   actionType: string
   start: number
   end: number
+  /** Length SponsorBlock published for the video, when the media element does not know it yet. */
+  videoDuration?: number
 }
 
 export interface VideoState {
   onVideo: boolean
+  /** False when the URL is a video but the player element is not there yet. */
+  attached: boolean
   videoId: string | null
   title: string | null
   channelId: string | null
@@ -22,6 +26,7 @@ export interface VideoState {
 export function emptyVideoState(): VideoState {
   return {
     onVideo: false,
+    attached: false,
     videoId: null,
     title: null,
     channelId: null,

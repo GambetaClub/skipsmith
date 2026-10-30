@@ -269,6 +269,71 @@ describe("seeking", () => {
   })
 })
 
+describe("NBCM_ZoWZo8 sponsor", () => {
+  const sponsor = segment(
+    "0cc063f84e1a242e7956ed38bade2d3d2fb39adffbd73d0c34b29d5d2913a3b37",
+    "sponsor",
+    147.5,
+    248.283,
+  )
+  const highlight = segment(
+    "45068756d814c0bf7423f859b793fb7b81def2a9b53e6921d39fa07f1b6de0127",
+    "poi_highlight",
+    2035.578,
+    2035.578,
+    "poi",
+  )
+  const duration = 2327.081
+  const modes = { sponsor: "auto" as const, poi_highlight: "seekbar" as const }
+
+  it("skips the sponsor at 2:27 and leaves the highlight", () => {
+    const { skips } = run([sponsor, highlight], modes, [{ time: 140 }, { time: 147.6 }], duration)
+    expect(skips).toEqual([{ at: 147.6, to: 248.283, uuids: [sponsor.uuid] }])
+  })
+
+  it("plays a seek back into the sponsor until the playhead is before its start", () => {
+    const { skips } = run(
+      [sponsor],
+      { sponsor: "auto" },
+      [
+        { time: 140 },
+        { time: 147.6 },
+        { time: 180, userSeek: true },
+        { time: 184 },
+        { time: 190 },
+        { time: 140, userSeek: true },
+        { time: 147.8 },
+      ],
+      duration,
+    )
+    expect(skips.map((skip) => skip.at)).toEqual([147.6, 147.8])
+  })
+
+  it("plays a backward jump that arrives without a seek flag", () => {
+    const { skips } = run([sponsor], { sponsor: "auto" }, [{ time: 260 }, { time: 180 }, { time: 186 }], duration)
+    expect(skips).toEqual([])
+  })
+
+  it("stays in the sponsor after unskip until playback moves before the start", () => {
+    const flags = holdSegments({}, [sponsor.uuid])
+    const decision = evaluate({
+      previousTime: 160,
+      currentTime: 163,
+      playbackRate: 1,
+      duration,
+      playing: true,
+      initial: false,
+      userSeek: false,
+      programmatic: false,
+      segments: [sponsor],
+      modes: { sponsor: "auto" },
+      flags,
+    })
+    expect(decision.skipTo).toBeNull()
+    expect(decision.button?.category).toBe("sponsor")
+  })
+})
+
 describe("manual skip", () => {
   it("skips the segment under the playhead even when it is seek-bar only", () => {
     const target = manualSkipTarget(12, [segment("a", "preview", 10, 20)], { preview: "seekbar" }, 100)

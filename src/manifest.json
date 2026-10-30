@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "description": "Skip sponsor segments on YouTube using SponsorBlock. The video id never leaves your browser.",
   "minimum_chrome_version": "114",
-  "permissions": ["storage"],
+  "permissions": ["storage", "activeTab"],
   "host_permissions": ["https://sponsor.ajay.app/*", "https://api.sponsor.ajay.app/*"],
   "background": {
     "service_worker": "background/service-worker.js"

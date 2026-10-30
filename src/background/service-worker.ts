@@ -1,4 +1,5 @@
 import { CACHE_KEY, readCached, writeCached, type SegmentCache } from "../lib/cache"
+import { recordDebug } from "../lib/debug-log"
 import { fetchSponsorSegments } from "../lib/sponsorblock"
 import { adjustStats, resolveStats, SETTINGS_KEY, STATS_KEY, resolveSettings } from "../lib/settings"
 import type { Segment } from "../lib/segment"
@@ -42,6 +43,10 @@ async function loadSegments(videoId: string): Promise<Segment[]> {
     const segments = await fetchSponsorSegments(videoId)
     const fresh = await readCache()
     await chrome.storage.local.set({ [CACHE_KEY]: writeCached(fresh, videoId, segments, Date.now()) })
+    void recordDebug(
+      "background",
+      segments.length === 0 ? `SponsorBlock has no segments for ${videoId}` : `SponsorBlock returned ${segments.length} segments for ${videoId}`,
+    )
     return segments
   })().finally(() => {
     inflight.delete(videoId)
@@ -71,10 +76,14 @@ function dispatch(message: unknown): Promise<unknown> | null {
     if (!VIDEO_ID.test(videoId)) return Promise.resolve({ ok: false, error: "That video id is not usable." })
     return loadSegments(videoId)
       .then((segments) => ({ ok: true as const, segments }))
-      .catch((error: unknown) => ({
-        ok: false as const,
-        error: error instanceof Error ? error.message : "SponsorBlock didn't respond.",
-      }))
+      .catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : "SponsorBlock didn't respond."
+        void recordDebug("background", `SponsorBlock error for ${videoId}: ${message}`)
+        return {
+          ok: false as const,
+          error: message,
+        }
+      })
   }
   if (typed.type === "adjust-stats") {
     const seconds = typeof typed.seconds === "number" ? typed.seconds : 0
