@@ -125,8 +125,11 @@ export function evaluate(input: EvaluateInput): Decision {
   const duration = Number.isFinite(input.duration) && input.duration > 0 ? input.duration : 0
   const rate = Number.isFinite(input.playbackRate) && input.playbackRate > 0 ? input.playbackRate : 1
   const backwardThreshold = Math.max(0.4, 0.25 * rate)
+  const deltaBack = input.previousTime - time
+  // A scrub into a segment must play it. YouTube sometimes applies that scrub as a
+  // bare currentTime jump, with no seek flag we can see, so a large step backward counts too.
   const backward =
-    !input.programmatic && input.userSeek && input.previousTime - time >= backwardThreshold
+    !input.programmatic && deltaBack >= backwardThreshold && (input.userSeek || deltaBack >= 1)
 
   for (const segment of input.segments) {
     if (!usable(segment, duration)) continue

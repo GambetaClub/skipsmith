@@ -5,6 +5,7 @@ export interface Settings {
   modes: Record<string, CategoryMode>
   excludedChannels: string[]
   rememberSpeed: boolean
+  debug: boolean
 }
 
 export interface Stats {
@@ -25,6 +26,7 @@ export function defaultSettings(): Settings {
     modes: defaultModes(),
     excludedChannels: [],
     rememberSpeed: false,
+    debug: false,
   }
 }
 
@@ -54,6 +56,7 @@ export function resolveSettings(stored: unknown): Settings {
     modes,
     excludedChannels: [...new Set(excluded)],
     rememberSpeed: typeof stored.rememberSpeed === "boolean" ? stored.rememberSpeed : false,
+    debug: stored.debug === true,
   }
 }
 

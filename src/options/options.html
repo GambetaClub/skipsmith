@@ -48,6 +48,19 @@
       </section>
 
       <section class="panel">
+        <h2>Debug log</h2>
+        <label class="check">
+          <input id="debug" type="checkbox" />
+          <span>
+            <strong>Record a debug log</strong>
+            <span class="hint">Stored only in this browser. Turn it on when a video does not skip. It notes whether the player was found, what SponsorBlock returned, each skip, and a seek back into a segment.</span>
+          </span>
+        </label>
+        <pre id="debug-log" class="debug-log" hidden></pre>
+        <button id="debug-clear" class="quiet" type="button" hidden>Clear log</button>
+      </section>
+
+      <section class="panel">
         <h2>Privacy</h2>
         <p>
           Skipsmith asks SponsorBlock with the first four characters of the SHA-256 of the video id. The request does not include the id.

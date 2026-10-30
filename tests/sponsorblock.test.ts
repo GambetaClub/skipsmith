@@ -7,6 +7,7 @@ describe("hash prefix", () => {
     expect(await sha256Hex("hello")).toBe("2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824")
     expect(await hashPrefix("hello")).toBe("2cf2")
     expect(await hashPrefix("dQw4w9WgXcQ")).toBe("5f6b")
+    expect(await hashPrefix("NBCM_ZoWZo8")).toBe("0cde")
   })
 })
 
@@ -51,6 +52,40 @@ describe("SponsorBlock responses", () => {
       await sha256Hex("dQw4w9WgXcQ"),
     )
     expect(segments).toEqual([])
+  })
+
+  it("keeps the sponsor and highlight published for NBCM_ZoWZo8", async () => {
+    const videoId = "NBCM_ZoWZo8"
+    const segments = selectSegments(
+      [
+        {
+          videoID: videoId,
+          segments: [
+            {
+              category: "sponsor",
+              actionType: "skip",
+              segment: [147.5, 248.283],
+              UUID: "0cc063f84e1a242e7956ed38bade2d3d2fb39adffbd73d0c34b29d5d2913a3b37",
+              videoDuration: 2327.081,
+              votes: 2,
+            },
+            {
+              category: "poi_highlight",
+              actionType: "poi",
+              segment: [2035.578, 2035.578],
+              UUID: "45068756d814c0bf7423f859b793fb7b81def2a9b53e6921d39fa07f1b6de0127",
+              videoDuration: 2327.081,
+              votes: 0,
+            },
+          ],
+        },
+      ],
+      videoId,
+      await sha256Hex(videoId),
+    )
+    expect(segments.map((segment) => segment.category)).toEqual(["sponsor", "poi_highlight"])
+    expect(segments[0]).toMatchObject({ start: 147.5, end: 248.283, actionType: "skip", videoDuration: 2327.081 })
+    expect(segments[1]).toMatchObject({ start: 2035.578, end: 2035.578, actionType: "poi" })
   })
 
   it("drops broken segments and zero-length skips, and keeps a highlight point", () => {

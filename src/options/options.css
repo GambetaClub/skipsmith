@@ -178,6 +178,34 @@ a {
   color: var(--green);
 }
 
+.debug-log {
+  margin-top: 12px;
+  max-height: 240px;
+  overflow: auto;
+  background: #241d16;
+  color: #f4efe6;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font: 12px/1.45 ui-monospace, "Cascadia Code", monospace;
+  white-space: pre-wrap;
+}
+
+.quiet {
+  margin-top: 8px;
+  border: 0;
+  background: transparent;
+  color: var(--green);
+  font: inherit;
+  font-weight: 650;
+  padding: 0;
+  cursor: pointer;
+}
+
+.quiet:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+
 footer {
   margin-top: 22px;
   font-size: 13px;

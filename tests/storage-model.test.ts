@@ -11,6 +11,7 @@ describe("settings", () => {
     const settings = resolveSettings(undefined)
     expect(settings.enabled).toBe(true)
     expect(settings.rememberSpeed).toBe(false)
+    expect(settings.debug).toBe(false)
     expect(settings.modes.sponsor).toBe("auto")
     expect(settings.modes.selfpromo).toBe("auto")
     expect(settings.modes.interaction).toBe("auto")
@@ -23,11 +24,13 @@ describe("settings", () => {
     const settings = resolveSettings({
       enabled: false,
       rememberSpeed: true,
+      debug: true,
       excludedChannels: ["UC123", "UC123", 4, ""],
       modes: { sponsor: "button", intro: "off", poi_highlight: "auto", filler: "nope" },
     })
     expect(settings.enabled).toBe(false)
     expect(settings.rememberSpeed).toBe(true)
+    expect(settings.debug).toBe(true)
     expect(settings.excludedChannels).toEqual(["UC123"])
     expect(settings.modes.sponsor).toBe("button")
     expect(settings.modes.intro).toBe("off")
